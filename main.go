@@ -84,6 +84,11 @@ func main() {
 	// 3. Exit when user chooses "3"
 	fmt.Println("🔒 Go Password Manager")
 
+	// Load existing passwords on startup
+	if err := loadPasswords(); err != nil {
+		fmt.Println("Warning: Could not load passwords.", err)
+	}
+
 	for {
 		//Print Menu
 		fmt.Println("Menu Password Manager")
@@ -111,6 +116,10 @@ func main() {
 			fmt.Print("Enter password: ")
 			fmt.Scanln(&password)
 
+			if err := savePassword(PasswordEntry{service, username, password}); err != nil {
+				fmt.Println("Error saving password:", err)
+			}
+
 			// Append to passwords slice
 			passwords = append(passwords, PasswordEntry{
 				Service:  service,
@@ -128,6 +137,12 @@ func main() {
 					break
 				}
 				fmt.Println("No password saved for", service)
+		case 3:
+			if err := savePasswords(); err != nil {
+				fmt.Println("Error saving passwords:", err)
+				}
+				fmt.Println("Existing...")
+				return
 			}
 		}
 	}
