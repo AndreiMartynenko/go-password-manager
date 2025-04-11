@@ -1,6 +1,15 @@
 package main
 
-import "fmt"
+import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/json"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+)
 
 type PasswordEntry struct {
 	Service  string `json:"service"`
@@ -10,6 +19,64 @@ type PasswordEntry struct {
 
 // in memory slice to hold entries
 var passwords []PasswordEntry
+
+const dataFile = "passwords.enc"
+
+var encryptionKey = []byte("32-byte-long-key-1234567890abcdef123456") // Replace later!
+
+// --- Encryption/Decryption Helpers ---
+
+func encrypt(data []byte) ([]byte, error) {
+	block, err := aes.NewCipher(encryptionKey)
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, err
+	}
+	return gcm.Seal(nonce, nonce, data, nil), nil
+}
+
+func decrypt(data []byte) ([]byte, error) {
+	block, err := aes.NewCipher(encryptionKey)
+	if err != nil {
+		return nil, err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	nonceSize := gcm.NonceSize()
+	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
+	return gcm.Open(nil, nonce, ciphertext, nil)
+}
+
+// --- Save/Load Functions ---
+func savePassword(password PasswordEntry) error {
+	data, err := json.Marshal(password)
+	if err != nil {
+		return err
+	}
+
+	encrypted, err := encrypt(data)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(dataFile, encrypted, 0644)
+}
+
+func loadPasswords() error {
+	if _, err := os.Stat(dataFile); os.IsNotExist(err) {
+		return nil // No file yet (first run)
+	}
+	encrypted, err := ioutil.ReadFile(dataFile)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(encrypted, &passwords)
+}
 
 func main() {
 	// 1. Print a menu: "1. Add password", "2. Get password", "3. Exit"
