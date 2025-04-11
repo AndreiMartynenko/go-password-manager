@@ -116,34 +116,43 @@ func main() {
 			fmt.Print("Enter password: ")
 			fmt.Scanln(&password)
 
-			if err := savePassword(PasswordEntry{service, username, password}); err != nil {
-				fmt.Println("Error saving password:", err)
-			}
-
-			// Append to passwords slice
 			passwords = append(passwords, PasswordEntry{
 				Service:  service,
 				Username: username,
 				Password: password,
 			})
-			fmt.Println("Password saved for", service)
+
+			if err := savePasswords(); err != nil { // Save all passwords after adding
+				fmt.Println("Error saving:", err)
+			} else {
+				fmt.Println("Password saved for", service)
+			}
+
 		case 2:
 			var service string
 			fmt.Print("Enter service: ")
 			fmt.Scanln(&service)
+			found := false
 			for _, entry := range passwords {
 				if entry.Service == service {
-					fmt.Println("Service: \nUsername: \nPassword: \n", entry.Service, entry.Username, entry.Password)
+					fmt.Printf("\nService: %s\nUsername: %s\nPassword: %s\n",
+						entry.Service, entry.Username, entry.Password)
+					found = true
 					break
 				}
+			}
+			if !found {
 				fmt.Println("No password saved for", service)
+			}
 		case 3:
 			if err := savePasswords(); err != nil {
 				fmt.Println("Error saving passwords:", err)
-				}
-				fmt.Println("Existing...")
-				return
 			}
+			fmt.Println("Exiting...")
+			return
+
+		default:
+			fmt.Println("Invalid choice. Try again.")
 		}
 	}
 }
